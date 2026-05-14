@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Café Stock Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#fdf8f0;
+  --cream2:#f7f0e4;
+  --cream3:#ede4d4;
+  --espresso:#2c1a0e;
+  --espresso2:#3d2614;
+  --latte:#7a5230;
+  --caramel:#c17f3a;
+  --caramel2:#e8a84e;
+  --foam:#fefaf4;
+  --border:#e0d4c0;
+  --border2:#c8b89a;
+  --text:#1e1208;
+  --muted:#7a6450;
+  --hint:#b8a488;
+  --green:#2d5a1b;--green-bg:#eaf5e0;--green-b:#a8d48a;
+  --amber:#7a4a08;--amber-bg:#fdf0d8;--amber-b:#f5c97a;
+  --red:#8a1f1f;--red-bg:#fdeaea;--red-b:#f0b0b0;
+  --r:12px;--rl:18px;
+}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--cream);
+  color:var(--text);
+  min-height:100vh;
+  font-size:14px;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(193,127,58,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(44,26,14,0.06) 0%, transparent 60%);
+}
+
+/* HEADER */
+.hdr{
+  background:var(--espresso);
+  padding:0 2rem;
+  height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 20px rgba(44,26,14,0.25);
+}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.brand-logo{
+  width:36px;height:36px;
+  background:var(--caramel);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--espresso);
+}
+.brand-text{font-family:'Playfair Display',serif;font-size:20px;color:var(--cream);letter-spacing:0.3px}
+.brand-sub{font-size:10px;color:var(--caramel2);letter-spacing:0.12em;text-transform:uppercase;margin-top:-3px}
+#alert-chip{
+  display:none;background:var(--red-bg);color:var(--red);
+  border:1px solid var(--red-b);border-radius:20px;
+  font-size:12px;font-weight:600;padding:4px 12px;cursor:pointer;
+}
+
+/* LAYOUT */
+.layout{display:flex;min-height:calc(100vh - 64px)}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;
+  background:var(--espresso2);
+  padding:1.5rem 0;
+  flex-shrink:0;
+  position:sticky;top:64px;
+  height:calc(100vh - 64px);
+  overflow-y:auto;
+}
+.nav-section{
+  padding:0.4rem 1.25rem 0.5rem;
+  font-size:9.5px;font-weight:700;
+  letter-spacing:0.14em;color:var(--caramel2);
+  text-transform:uppercase;margin-top:0.5rem;
+}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 1.25rem;width:100%;
+  background:none;border:none;
+  color:rgba(253,248,240,0.55);
+  font-size:13.5px;font-family:'DM Sans',sans-serif;
+  cursor:pointer;position:relative;
+  transition:background 0.15s,color 0.15s;text-align:left;
+}
+.nav-btn i{font-size:17px}
+.nav-btn:hover{background:rgba(255,255,255,0.07);color:var(--cream)}
+.nav-btn.active{color:var(--caramel2);background:rgba(193,127,58,0.15);font-weight:600}
+.nav-btn.active::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:3px;background:var(--caramel);border-radius:0 3px 3px 0}
+.nav-badge{margin-left:auto;background:var(--red-bg);color:var(--red);font-size:11px;padding:1px 8px;border-radius:10px;font-weight:700}
+.nav-divider{height:0.5px;background:rgba(255,255,255,0.08);margin:0.75rem 1.25rem}
+
+/* MAIN */
+.main{flex:1;padding:2rem;min-width:0}
+.page{display:none}.page.active{display:block}
+
+.pg-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px}
+.pg-sub{font-size:13px;color:var(--muted);margin-bottom:1.75rem}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.75rem}
+.metric{
+  background:var(--foam);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  padding:1.1rem 1.25rem;
+  position:relative;overflow:hidden;
+}
+.metric::before{content:'';position:absolute;top:-20px;right:-20px;width:70px;height:70px;border-radius:50%;background:rgba(193,127,58,0.07)}
+.metric-lbl{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+.metric-val{font-family:'Playfair Display',serif;font-size:30px;font-weight:700}
+.c-ok{color:var(--green)}.c-warn{color:var(--amber)}.c-danger{color:var(--red)}.c-latte{color:var(--latte)}
+
+/* CARD */
+.card{
+  background:var(--foam);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  margin-bottom:1.25rem;
+  overflow:hidden;
+}
+.card-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1rem 1.25rem;
+  border-bottom:1px solid var(--border);
+  background:var(--cream2);
+}
+.card-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse}
+th{
+  text-align:left;font-size:10.5px;font-weight:700;
+  letter-spacing:0.07em;text-transform:uppercase;
+  color:var(--muted);padding:10px 14px;
+  border-bottom:1px solid var(--border);
+  background:var(--cream2);
+}
+td{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--cream2)}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.02em}
+.b-ok{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
+.b-low{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
+.b-out{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b)}
+
+/* BUTTONS */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:8px 16px;font-size:13px;font-weight:500;
+  font-family:'DM Sans',sans-serif;
+  border:1px solid var(--border2);border-radius:var(--r);
+  background:transparent;color:var(--text);
+  cursor:pointer;transition:all 0.15s;white-space:nowrap;
+}
+.btn:hover{background:var(--cream3);border-color:var(--latte)}
+.btn-espresso{background:var(--espresso);color:var(--cream);border-color:var(--espresso)}
+.btn-espresso:hover{background:var(--espresso2);color:var(--cream)}
+.btn-caramel{background:var(--caramel);color:var(--foam);border-color:var(--caramel)}
+.btn-caramel:hover{background:var(--caramel2);color:var(--espresso)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{color:var(--red);border-color:var(--red-b)}.btn-danger:hover{background:var(--red-bg)}
+.btn-success{color:var(--green);border-color:var(--green-b)}.btn-success:hover{background:var(--green-bg)}
+
+/* INPUTS */
+input[type=text],input[type=number],select,textarea{
+  font-size:14px;color:var(--text);
+  background:var(--foam);
+  border:1px solid var(--border2);
+  border-radius:var(--r);padding:9px 13px;
+  outline:none;width:100%;
+  font-family:'DM Sans',sans-serif;
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--caramel);
+  box-shadow:0 0 0 3px rgba(193,127,58,0.12);
+}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%237a5230' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+
+/* SEARCH BAR */
+.search-bar{display:flex;gap:10px;padding:1rem 1.25rem;border-bottom:1px solid var(--border);background:var(--cream2);flex-wrap:wrap}
+
+/* IMPORT PAGE */
+.import-wrap{max-width:600px;margin:0 auto}
+.import-card{
+  background:var(--foam);
+  border:1px solid var(--border);
+  border-radius:var(--rl);
+  overflow:hidden;
+  box-shadow:0 4px 24px rgba(44,26,14,0.07);
+}
+.import-header{
+  background:var(--espresso);
+  padding:1.75rem 2rem;
+  text-align:center;
+}
+.import-header .cafe-icon{font-size:36px;color:var(--caramel2);margin-bottom:8px}
+.import-header h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--cream);margin-bottom:4px}
+.import-header p{font-size:13px;color:rgba(253,248,240,0.6)}
+.import-body{padding:2rem}
+.step{display:flex;align-items:flex-start;gap:14px;margin-bottom:1.75rem}
+.step-num{
+  width:28px;height:28px;min-width:28px;
+  background:var(--caramel);color:var(--foam);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;margin-top:2px;
+  font-family:'Playfair Display',serif;
+}
+.step-body{flex:1}
+.step-label{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.step-title{font-size:15px;font-weight:600;margin-bottom:8px;color:var(--espresso)}
+
+/* PRODUCT PREVIEW BOX */
+.preview-box{
+  background:var(--cream2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:1rem 1.25rem;
+  margin-top:0.75rem;
+  display:none;
+}
+.preview-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:13.5px}
+.preview-lbl{color:var(--muted);font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase}
+.preview-val{font-weight:600;color:var(--espresso)}
+
+/* CONFIRM DIALOG */
+.confirm-box{
+  background:var(--cream2);
+  border:1.5px solid var(--caramel);
+  border-radius:var(--rl);
+  padding:1.5rem;
+  margin-top:1.25rem;
+  display:none;
+  text-align:center;
+}
+.confirm-box .confirm-icon{font-size:32px;color:var(--caramel);margin-bottom:0.75rem}
+.confirm-box h4{font-family:'Playfair Display',serif;font-size:17px;margin-bottom:6px}
+.confirm-box p{font-size:13px;color:var(--muted);margin-bottom:1.25rem}
+.confirm-actions{display:flex;gap:10px;justify-content:center}
+
+/* THANKS */
+.thanks-box{
+  display:none;text-align:center;padding:2.5rem 1.5rem;
+}
+.thanks-icon{font-size:56px;color:var(--caramel);margin-bottom:1rem;animation:popIn 0.5s cubic-bezier(.36,.07,.19,.97)}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}70%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.thanks-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--espresso);margin-bottom:8px}
+.thanks-sub{font-size:14px;color:var(--muted);margin-bottom:1.75rem}
+
+/* ALERT ITEMS */
+.alert-item{display:flex;align-items:flex-start;gap:13px;padding:14px 1.25rem;border-bottom:1px solid var(--border)}
+.alert-item:last-child{border-bottom:none}
+.ai-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;margin-top:2px}
+.ai-icon.danger{background:var(--red-bg);color:var(--red)}
+.ai-icon.warn{background:var(--amber-bg);color:var(--amber)}
+.ai-body{flex:1}
+.ai-title{font-weight:600;font-size:13.5px}
+.ai-sub{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(44,26,14,0.55);z-index:300;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{
+  background:var(--foam);border:1px solid var(--border2);
+  border-radius:var(--rl);padding:2rem;
+  width:420px;max-width:95vw;max-height:90vh;overflow-y:auto;
+  box-shadow:0 16px 48px rgba(44,26,14,0.2);
+}
+.modal h3{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:1.25rem}
+.form-row{margin-bottom:13px}
+.form-lbl{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+
+/* CHART */
+.chart-wrap{position:relative;width:100%;height:260px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-bottom:0.75rem}
+.ld{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+
+/* EMPTY */
+.empty{padding:2.5rem;text-align:center;color:var(--muted)}
+.empty i{font-size:34px;display:block;margin-bottom:10px;color:var(--hint)}
+
+/* TOAST */
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{
+  background:var(--espresso);color:var(--cream);
+  padding:11px 18px;border-radius:var(--r);
+  font-size:13px;animation:slideIn 0.25s ease;
+  box-shadow:0 6px 24px rgba(44,26,14,0.25);
+  border-left:3px solid var(--caramel);
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ROW BETWEEN */
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+@media(max-width:700px){
+  .sidebar{display:none}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .main{padding:1rem}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">
+    <div class="brand-logo"><i class="ti ti-coffee" aria-hidden="true"></i></div>
+    <div>
+      <div class="brand-text">Café Stock</div>
+      <div class="brand-sub">Inventory Manager</div>
+    </div>
+  </div>
+  <div>
+    <span id="alert-chip" onclick="showPage('alerts')"></span>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">Main Menu</div>
+    <button class="nav-btn active" data-page="dashboard" onclick="showPage('dashboard')"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+    <button class="nav-btn" data-page="import" onclick="showPage('import')"><i class="ti ti-basket-plus"></i> Add Product</button>
+    <div class="nav-divider"></div>
+    <div class="nav-section">Management</div>
+    <button class="nav-btn" data-page="inventory" onclick="showPage('inventory')"><i class="ti ti-list-details"></i> Edit Stock</button>
+    <button class="nav-btn" data-page="alerts" onclick="showPage('alerts')"><i class="ti ti-bell"></i> Alerts <span class="nav-badge" id="nav-count" style="display:none"></span></button>
+    <button class="nav-btn" data-page="reports" onclick="showPage('reports')"><i class="ti ti-chart-bar"></i> Report</button>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="page active">
+      <div class="pg-title">Good morning ☕</div>
+      <div class="pg-sub">Here's your café stock overview for today</div>
+      <div class="metrics" id="dash-metrics"></div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Items needing attention</span></div>
+        <table><thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Min</th><th>Status</th><th></th></tr></thead>
+        <tbody id="dash-body"></tbody></table>
+      </div>
+    </section>
+
+    <!-- IMPORT / ADD PRODUCT -->
+    <section id="page-import" class="page">
+      <div class="pg-title">Add Product</div>
+      <div class="pg-sub">Select a stock category, enter product details, and confirm</div>
+
+      <div class="import-wrap">
+        <!-- MAIN FORM CARD -->
+        <div class="import-card" id="import-form-card">
+          <div class="import-header">
+            <div class="cafe-icon"><i class="ti ti-shopping-bag" aria-hidden="true"></i></div>
+            <h2>New Product</h2>
+            <p>Fill in the 3 steps below to add a product to your stock</p>
+          </div>
+          <div class="import-body">
+
+            <!-- STEP 1: CATEGORY + NAME -->
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <div class="step-label">Step 1</div>
+                <div class="step-title">Select stock category & product name</div>
+                <div class="form-row" style="margin-bottom:10px">
+                  <label class="form-lbl" for="imp-cat">Category</label>
+                  <select id="imp-cat" onchange="onCatChange()">
+                    <option value="">— Choose a category —</option>
+                    <option>Meat &amp; Seafood</option>
+                    <option>Vegetables</option>
+                    <option>Dairy</option>
+                    <option>Dry Goods</option>
+                    <option>Beverages</option>
+                    <option>Spices</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div id="existing-wrap" style="display:none;margin-bottom:10px">
+                  <label class="form-lbl" for="imp-existing">Top-up existing product (optional)</label>
+                  <select id="imp-existing" onchange="onExistingSelect()">
+                    <option value="">— Or pick existing to top-up —</option>
+                  </select>
+                </div>
+                <div class="form-row" style="margin-bottom:0">
+                  <label class="form-lbl" for="imp-name">✏️ New product name <span style="color:var(--caramel);font-style:italic;text-transform:none;letter-spacing:0">(type here to add new)</span></label>
+                  <input type="text" id="imp-name" placeholder="e.g. Arabica Coffee Beans" oninput="updatePreview()">
+                </div>
+              </div>
+            </div>
+
+            <!-- STEP 2: QTY + UNIT + MIN -->
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <div class="step-label">Step 2</div>
+                <div class="step-title">Set quantity</div>
+                <div class="form-grid">
+                  <div class="form-row">
+                    <label class="form-lbl" for="imp-qty">Quantity</label>
+                    <input type="number" id="imp-qty" min="0" placeholder="0" oninput="updatePreview()">
+                  </div>
+                  <div class="form-row">
+                    <label class="form-lbl" for="imp-unit">Unit</label>
+                    <select id="imp-unit" onchange="updatePreview()">
+                      <option value="kg">kg</option>
+                      <option value="g">g</option>
+                      <option value="L">L</option>
+                      <option value="ml">ml</option>
+                      <option value="pcs">pcs</option>
+                      <option value="box">box</option>
+                      <option value="bag">bag</option>
+                      <option value="bottle">bottle</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row" style="margin-bottom:0">
+                  <label class="form-lbl" for="imp-min">Minimum stock alert level</label>
+                  <input type="number" id="imp-min" min="0" placeholder="0" oninput="updatePreview()">
+                </div>
+              </div>
+            </div>
+
+            <!-- PREVIEW BOX -->
+            <div class="preview-box" id="preview-box">
+              <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Product preview</div>
+              <div class="preview-row">
+                <span class="preview-lbl">Name</span>
+                <span class="preview-val" id="pv-name">—</span>
+              </div>
+              <div class="preview-row">
+                <span class="preview-lbl">Category</span>
+                <span class="preview-val" id="pv-cat">—</span>
+              </div>
+              <div class="preview-row">
+                <span class="preview-lbl">Quantity</span>
+                <span class="preview-val" id="pv-qty">—</span>
+              </div>
+              <div class="preview-row">
+                <span class="preview-lbl">Min alert</span>
+                <span class="preview-val" id="pv-min">—</span>
+              </div>
+            </div>
+
+            <!-- STEP 3: ADD BUTTON -->
+            <div class="step" style="margin-top:1.5rem;margin-bottom:0">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <div class="step-label">Step 3</div>
+                <div class="step-title">Confirm and add product</div>
+                <button class="btn btn-caramel" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:8px;border-radius:var(--rl)" onclick="clickAddProduct()">
+                  <i class="ti ti-basket-plus" aria-hidden="true"></i> Add Product
+                </button>
+              </div>
+            </div>
+
+            <!-- CONFIRM DIALOG -->
+            <div class="confirm-box" id="confirm-box">
+              <div class="confirm-icon"><i class="ti ti-help-circle" aria-hidden="true"></i></div>
+              <h4>Are you sure?</h4>
+              <p>You are about to add <strong id="confirm-name"></strong> to your stock.</p>
+              <div style="background:var(--cream3);border-radius:var(--r);padding:0.9rem 1rem;text-align:left;margin-bottom:1.25rem;font-size:13px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--muted)">Product</span><strong id="cd-name"></strong></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--muted)">Category</span><strong id="cd-cat"></strong></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--muted)">Quantity</span><strong id="cd-qty"></strong></div>
+                <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Min alert</span><strong id="cd-min"></strong></div>
+              </div>
+              <div class="confirm-actions">
+                <button class="btn" onclick="closeConfirm()"><i class="ti ti-x"></i> Cancel</button>
+                <button class="btn btn-espresso" onclick="doAddProduct()"><i class="ti ti-check"></i> Sure, Add it!</button>
+              </div>
+            </div>
+
+          </div><!-- /import-body -->
+        </div><!-- /import-card -->
+
+        <!-- THANKS CARD -->
+        <div class="import-card" id="thanks-card" style="display:none">
+          <div class="import-header">
+            <div class="cafe-icon"><i class="ti ti-coffee" aria-hidden="true"></i></div>
+            <h2>Café Stock</h2>
+            <p>Inventory Manager</p>
+          </div>
+          <div class="thanks-box">
+            <div class="thanks-icon">☕</div>
+            <div class="thanks-title">Thank you!</div>
+            <div class="thanks-sub" id="thanks-msg">Product has been added to your stock successfully.</div>
+            <button class="btn btn-caramel" onclick="resetImport()" style="padding:10px 28px;font-size:14px">
+              <i class="ti ti-plus"></i> Add another product
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /import-wrap -->
+    </section>
+
+    <!-- EDIT STOCK -->
+    <section id="page-inventory" class="page">
+      <div class="row-between" style="margin-bottom:1.75rem">
+        <div><div class="pg-title">Edit Stock</div><div class="pg-sub">Manage all café inventory items</div></div>
+        <button class="btn btn-caramel" onclick="openAdd()"><i class="ti ti-plus"></i> Add item</button>
+      </div>
+      <div class="card">
+        <div class="search-bar">
+          <input type="text" id="search" placeholder="Search by name or category..." oninput="renderInventory()" style="max-width:260px">
+          <select id="cat-filter" onchange="renderInventory()" style="max-width:170px">
+            <option value="">All categories</option>
+            <option>Meat &amp; Seafood</option><option>Vegetables</option><option>Dairy</option>
+            <option>Dry Goods</option><option>Beverages</option><option>Spices</option><option>Other</option>
+          </select>
+          <select id="status-filter" onchange="renderInventory()" style="max-width:150px">
+            <option value="">All status</option>
+            <option value="ok">OK</option><option value="low">Low stock</option><option value="out">Out of stock</option>
+          </select>
+        </div>
+        <table>
+          <thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Unit</th><th>Min</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="inv-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section id="page-alerts" class="page">
+      <div class="row-between" style="margin-bottom:1.75rem">
+        <div><div class="pg-title">Stock Alerts</div><div class="pg-sub">Items that need restocking</div></div>
+        <button class="btn btn-sm" onclick="renderAlerts()"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+      <div class="card"><div id="alerts-list"></div></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="page-reports" class="page">
+      <div class="row-between" style="margin-bottom:1.75rem">
+        <div><div class="pg-title">Stock Report</div><div class="pg-sub">Analytics and full inventory summary</div></div>
+        <button class="btn btn-sm" onclick="exportReport()"><i class="ti ti-download"></i> Export CSV</button>
+      </div>
+      <div class="metrics" id="rep-metrics"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem">
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">By category</span></div>
+          <div style="padding:1rem">
+            <div class="legend">
+              <span><span class="ld" style="background:#2d5a1b"></span>OK</span>
+              <span><span class="ld" style="background:#7a4a08"></span>Low</span>
+              <span><span class="ld" style="background:#8a1f1f"></span>Out</span>
+            </div>
+            <div class="chart-wrap"><canvas id="catChart" role="img" aria-label="Category stock chart">Chart</canvas></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Status breakdown</span></div>
+          <div style="padding:1rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+            <div style="position:relative;width:170px;height:170px;flex-shrink:0">
+              <canvas id="statusChart" role="img" aria-label="Status doughnut chart">Chart</canvas>
+            </div>
+            <div id="status-legend" style="font-size:13px;line-height:2.4"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Full stock list</span></div>
+        <table>
+          <thead><tr><th>Item</th><th>Category</th><th>Qty</th><th>Unit</th><th>Min</th><th>Status</th></tr></thead>
+          <tbody id="rep-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="overlay" id="item-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add item</h3>
+    <div class="form-row"><label class="form-lbl">Item name</label><input type="text" id="f-name" placeholder="e.g. Arabica Beans"></div>
+    <div class="form-row">
+      <label class="form-lbl">Category</label>
+      <select id="f-cat">
+        <option>Meat &amp; Seafood</option><option>Vegetables</option><option>Dairy</option>
+        <option>Dry Goods</option><option>Beverages</option><option>Spices</option><option>Other</option>
+      </select>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-lbl">Quantity</label><input type="number" id="f-qty" min="0" placeholder="0"></div>
+      <div class="form-row"><label class="form-lbl">Unit</label><input type="text" id="f-unit" placeholder="kg / pcs / L"></div>
+    </div>
+    <div class="form-row"><label class="form-lbl">Min alert level</label><input type="number" id="f-min" min="0" placeholder="0"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-espresso" onclick="saveItem()"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADJUST MODAL -->
+<div class="overlay" id="adj-modal">
+  <div class="modal">
+    <h3 id="adj-title">Adjust stock</h3>
+    <p id="adj-current" style="font-size:12.5px;color:var(--muted);margin-bottom:1rem"></p>
+    <div class="form-row">
+      <label class="form-lbl">Action</label>
+      <select id="adj-action">
+        <option value="add">➕ Add stock</option>
+        <option value="remove">➖ Remove stock</option>
+        <option value="set">✏️ Set exact quantity</option>
+      </select>
+    </div>
+    <div class="form-row"><label class="form-lbl">Amount</label><input type="number" id="adj-amount" min="0" placeholder="0"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="closeAdj()">Cancel</button>
+      <button class="btn btn-espresso" onclick="applyAdj()"><i class="ti ti-check"></i> Apply</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ── DATA ── */
+let items = [
+  {id:1,name:'Chicken breast',    cat:'Meat & Seafood',qty:12,unit:'kg', min:10},
+];
+let nextId=16, editId=null, adjId=null;
+let catChart=null, statusChart=null;
+
+/* ── HELPERS ── */
+function status(i){return i.qty===0?'out':i.qty<i.min?'low':'ok'}
+function badge(s){const m={ok:'OK',low:'Low stock',out:'Out of stock'};return`<span class="badge b-${s}">${m[s]}</span>`}
+function toast(msg,t=2800){const d=document.createElement('div');d.className='toast-msg';d.textContent=msg;document.getElementById('toast').appendChild(d);setTimeout(()=>d.remove(),t)}
+
+function updateAlerts(){
+  const n=items.filter(i=>status(i)!=='ok').length;
+  const chip=document.getElementById('alert-chip');
+  const nb=document.getElementById('nav-count');
+  if(n>0){chip.style.display='';chip.textContent=n+' alert'+(n>1?'s':'');nb.style.display='';nb.textContent=n;}
+  else{chip.style.display='none';nb.style.display='none';}
+}
+
+/* ── NAVIGATION ── */
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn[data-page]').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const btn=document.querySelector('.nav-btn[data-page="'+p+'"]');
+  if(btn) btn.classList.add('active');
+  const r={dashboard:renderDashboard,inventory:renderInventory,alerts:renderAlerts,reports:renderReports};
+  if(r[p])r[p]();
+}
+
+/* ── DASHBOARD ── */
+function renderDashboard(){
+  updateAlerts();
+  const ok=items.filter(i=>status(i)==='ok').length;
+  const low=items.filter(i=>status(i)==='low').length;
+  const out=items.filter(i=>status(i)==='out').length;
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="metric"><div class="metric-lbl">Total items</div><div class="metric-val c-latte">${items.length}</div></div>
+    <div class="metric"><div class="metric-lbl">In stock</div><div class="metric-val c-ok">${ok}</div></div>
+    <div class="metric"><div class="metric-lbl">Low stock</div><div class="metric-val c-warn">${low}</div></div>
+    <div class="metric"><div class="metric-lbl">Out of stock</div><div class="metric-val c-danger">${out}</div></div>`;
+  const ai=[...items.filter(i=>status(i)==='out'),...items.filter(i=>status(i)==='low')];
+  const tb=document.getElementById('dash-body');
+  if(!ai.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><i class="ti ti-circle-check"></i>All items are well stocked — enjoy your coffee! ☕</div></td></tr>';return;}
+  tb.innerHTML=ai.map(i=>`<tr>
+    <td style="font-weight:600">${i.name}</td><td>${i.cat}</td>
+    <td>${i.qty} ${i.unit}</td><td>${i.min} ${i.unit}</td><td>${badge(status(i))}</td>
+    <td><button class="btn btn-sm btn-success" onclick="openAdj(${i.id})"><i class="ti ti-plus"></i> Restock</button></td>
+  </tr>`).join('');
+}
+
+/* ── IMPORT / ADD PRODUCT ── */
+function onCatChange(){
+  const cat=document.getElementById('imp-cat').value;
+  const ew=document.getElementById('existing-wrap');
+  const sel=document.getElementById('imp-existing');
+  // clear name field when category changes
+  document.getElementById('imp-name').value='';
+  document.getElementById('imp-qty').value='';
+  document.getElementById('imp-min').value='';
+  document.getElementById('imp-unit').value='kg';
+  if(!cat){ew.style.display='none';updatePreview();return;}
+  const catItems=items.filter(i=>i.cat===cat);
+  if(catItems.length>0){
+    sel.innerHTML='<option value="">— Or pick existing to top-up —</option>'+catItems.map(i=>`<option value="${i.id}">${i.name} (stock: ${i.qty} ${i.unit})</option>`).join('');
+    ew.style.display='';
+  } else {
+    sel.innerHTML='<option value="">— No existing products —</option>';
+    ew.style.display='none';
+  }
+  updatePreview();
+}
+
+function onExistingSelect(){
+  const id=parseInt(document.getElementById('imp-existing').value);
+  if(!id){document.getElementById('imp-name').value='';updatePreview();return;}
+  const item=items.find(i=>i.id===id);
+  if(item){
+    document.getElementById('imp-name').value=item.name;
+    document.getElementById('imp-unit').value=item.unit;
+    document.getElementById('imp-min').value=item.min;
+  }
+  updatePreview();
+}
+
+function updatePreview(){
+  const name=document.getElementById('imp-name').value.trim();
+  const cat=document.getElementById('imp-cat').value;
+  const qty=document.getElementById('imp-qty').value;
+  const unit=document.getElementById('imp-unit').value;
+  const min=document.getElementById('imp-min').value;
+  const box=document.getElementById('preview-box');
+  if(name||cat||qty){
+    box.style.display='';
+    document.getElementById('pv-name').textContent=name||'—';
+    document.getElementById('pv-cat').textContent=cat||'—';
+    document.getElementById('pv-qty').textContent=qty?(qty+' '+unit):'—';
+    document.getElementById('pv-min').textContent=min?(min+' '+unit):'—';
+  } else {
+    box.style.display='none';
+  }
+}
+
+function clickAddProduct(){
+  const name=document.getElementById('imp-name').value.trim();
+  const cat=document.getElementById('imp-cat').value;
+  const qty=document.getElementById('imp-qty').value;
+  if(!cat){toast('Please select a category first');return;}
+  if(!name){toast('Please enter a product name');return;}
+  if(qty===''||qty===undefined){toast('Please enter a quantity');return;}
+  const unit=document.getElementById('imp-unit').value;
+  const min=document.getElementById('imp-min').value||'0';
+  document.getElementById('confirm-name').textContent=name;
+  document.getElementById('cd-name').textContent=name;
+  document.getElementById('cd-cat').textContent=cat;
+  document.getElementById('cd-qty').textContent=qty+' '+unit;
+  document.getElementById('cd-min').textContent=min+' '+unit;
+  document.getElementById('confirm-box').style.display='block';
+  setTimeout(function(){document.getElementById('confirm-box').scrollIntoView({behavior:'smooth',block:'nearest'});},50);
+}
+
+function closeConfirm(){document.getElementById('confirm-box').style.display='none';}
+
+function doAddProduct(){
+  try{
+    const name=document.getElementById('imp-name').value.trim();
+    const cat=document.getElementById('imp-cat').value;
+    const qty=parseFloat(document.getElementById('imp-qty').value)||0;
+    const unit=document.getElementById('imp-unit').value;
+    const min=parseFloat(document.getElementById('imp-min').value)||0;
+    const existingEl=document.getElementById('imp-existing');
+    const existingId=existingEl?parseInt(existingEl.value)||0:0;
+    if(existingId){
+      const item=items.find(function(i){return i.id===existingId;});
+      if(item){item.qty=item.qty+qty;item.min=min;}
+    } else {
+      items.push({id:nextId++,name:name,cat:cat,qty:qty,unit:unit,min:min});
+    }
+    updateAlerts();
+    document.getElementById('thanks-msg').textContent='Product '+name+' has been added to '+cat+' stock successfully.';
+    document.getElementById('import-form-card').style.display='none';
+    document.getElementById('thanks-card').style.display='block';
+  }catch(err){
+    toast('Error: '+err.message);
+  }
+}
+
+function resetImport(){
+  document.getElementById('import-form-card').style.display='';
+  document.getElementById('thanks-card').style.display='none';
+  document.getElementById('confirm-box').style.display='none';
+  document.getElementById('preview-box').style.display='none';
+  document.getElementById('imp-cat').value='';
+  document.getElementById('imp-name').value='';
+  document.getElementById('imp-qty').value='';
+  document.getElementById('imp-min').value='';
+  document.getElementById('imp-unit').value='kg';
+  document.getElementById('existing-wrap').style.display='none';
+}
+
+/* ── INVENTORY ── */
+function renderInventory(){
+  updateAlerts();
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const cf=document.getElementById('cat-filter').value;
+  const sf=document.getElementById('status-filter').value;
+  const filtered=items.filter(i=>(i.name.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q))&&(!cf||i.cat===cf)&&(!sf||status(i)===sf));
+  const tb=document.getElementById('inv-body');
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="7"><div class="empty"><i class="ti ti-search"></i>No items found</div></td></tr>';return;}
+  tb.innerHTML=filtered.map(i=>`<tr>
+    <td style="font-weight:600">${i.name}</td><td>${i.cat}</td>
+    <td><strong>${i.qty}</strong></td><td>${i.unit}</td><td>${i.min}</td>
+    <td>${badge(status(i))}</td>
+    <td><div style="display:flex;gap:6px">
+      <button class="btn btn-sm btn-success" onclick="openAdj(${i.id})" title="Adjust"><i class="ti ti-plus-minus"></i></button>
+      <button class="btn btn-sm" onclick="openEdit(${i.id})" title="Edit"><i class="ti ti-edit"></i></button>
+      <button class="btn btn-sm btn-danger" onclick="deleteItem(${i.id})" title="Delete"><i class="ti ti-trash"></i></button>
+    </div></td>
+  </tr>`).join('');
+}
+
+/* ── ITEM MODAL ── */
+function openAdd(){editId=null;document.getElementById('modal-title').textContent='Add item';['f-name','f-qty','f-unit','f-min'].forEach(id=>document.getElementById(id).value='');document.getElementById('item-modal').classList.add('open')}
+function openEdit(id){editId=id;const i=items.find(x=>x.id===id);document.getElementById('modal-title').textContent='Edit: '+i.name;document.getElementById('f-name').value=i.name;document.getElementById('f-cat').value=i.cat;document.getElementById('f-qty').value=i.qty;document.getElementById('f-unit').value=i.unit;document.getElementById('f-min').value=i.min;document.getElementById('item-modal').classList.add('open')}
+function closeModal(){document.getElementById('item-modal').classList.remove('open')}
+function saveItem(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){toast('Please enter an item name');return;}
+  const obj={name,cat:document.getElementById('f-cat').value,qty:parseFloat(document.getElementById('f-qty').value)||0,unit:document.getElementById('f-unit').value.trim()||'pcs',min:parseFloat(document.getElementById('f-min').value)||0};
+  if(editId){Object.assign(items.find(i=>i.id===editId),obj);toast('Item updated ✓');}
+  else{items.push({id:nextId++,...obj});toast('Item added ✓');}
+  closeModal();renderInventory();renderDashboard();
+}
+function deleteItem(id){if(!confirm('Delete this item?'))return;items=items.filter(i=>i.id!==id);toast('Item deleted');renderInventory();renderDashboard();}
+
+/* ── ADJUST ── */
+function openAdj(id){adjId=id;const i=items.find(x=>x.id===id);document.getElementById('adj-title').textContent='Adjust: '+i.name;document.getElementById('adj-current').textContent='Current: '+i.qty+' '+i.unit;document.getElementById('adj-amount').value='';document.getElementById('adj-modal').classList.add('open')}
+function closeAdj(){document.getElementById('adj-modal').classList.remove('open')}
+function applyAdj(){
+  const i=items.find(x=>x.id===adjId);
+  const action=document.getElementById('adj-action').value;
+  const amt=parseFloat(document.getElementById('adj-amount').value)||0;
+  const prev=i.qty;
+  if(action==='add')i.qty=Math.max(0,i.qty+amt);
+  else if(action==='remove')i.qty=Math.max(0,i.qty-amt);
+  else i.qty=Math.max(0,amt);
+  closeAdj();toast(`${i.name}: ${prev} → ${i.qty} ${i.unit}`);renderInventory();renderDashboard();
+}
+
+/* ── ALERTS ── */
+function renderAlerts(){
+  updateAlerts();
+  const ai=[...items.filter(i=>status(i)==='out'),...items.filter(i=>status(i)==='low')];
+  const list=document.getElementById('alerts-list');
+  if(!ai.length){list.innerHTML='<div class="empty"><i class="ti ti-circle-check"></i>No alerts — all items are well stocked! ☕</div>';return;}
+  list.innerHTML=ai.map(i=>{const s=status(i);return`<div class="alert-item">
+    <div class="ai-icon ${s==='out'?'danger':'warn'}"><i class="ti ${s==='out'?'ti-circle-x':'ti-alert-triangle'}"></i></div>
+    <div class="ai-body">
+      <div class="ai-title">${i.name} ${s==='out'?'is out of stock':'is running low'}</div>
+      <div class="ai-sub">${s==='out'?`Completely out · Min: ${i.min} ${i.unit}`:`${i.qty} ${i.unit} left · Min: ${i.min} ${i.unit}`} · ${i.cat}</div>
+    </div>
+    <button class="btn btn-sm btn-success" onclick="openAdj(${i.id})"><i class="ti ti-plus"></i> Restock</button>
+  </div>`;}).join('');
+}
+
+/* ── REPORTS ── */
+function renderReports(){
+  const ok=items.filter(i=>status(i)==='ok').length;
+  const low=items.filter(i=>status(i)==='low').length;
+  const out=items.filter(i=>status(i)==='out').length;
+  const cats=[...new Set(items.map(i=>i.cat))];
+  document.getElementById('rep-metrics').innerHTML=`
+    <div class="metric"><div class="metric-lbl">Total items</div><div class="metric-val c-latte">${items.length}</div></div>
+    <div class="metric"><div class="metric-lbl">Categories</div><div class="metric-val c-latte">${cats.length}</div></div>
+    <div class="metric"><div class="metric-lbl">Alerts</div><div class="metric-val ${out>0?'c-danger':low>0?'c-warn':'c-ok'}">${out+low}</div></div>
+    <div class="metric"><div class="metric-lbl">Healthy</div><div class="metric-val c-ok">${Math.round(ok/items.length*100)}%</div></div>`;
+  const catData=cats.map(c=>{const ci=items.filter(i=>i.cat===c);return{cat:c,ok:ci.filter(i=>status(i)==='ok').length,low:ci.filter(i=>status(i)==='low').length,out:ci.filter(i=>status(i)==='out').length};});
+  if(catChart)catChart.destroy();
+  catChart=new Chart(document.getElementById('catChart'),{type:'bar',data:{labels:catData.map(d=>d.cat),datasets:[{label:'OK',data:catData.map(d=>d.ok),backgroundColor:'#2d5a1b'},{label:'Low',data:catData.map(d=>d.low),backgroundColor:'#7a4a08'},{label:'Out',data:catData.map(d=>d.out),backgroundColor:'#8a1f1f'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true},y:{stacked:true,ticks:{stepSize:1}}}}});
+  if(statusChart)statusChart.destroy();
+  statusChart=new Chart(document.getElementById('statusChart'),{type:'doughnut',data:{labels:['OK','Low','Out'],datasets:[{data:[ok,low,out],backgroundColor:['#2d5a1b','#7a4a08','#8a1f1f'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'60%'}});
+  document.getElementById('status-legend').innerHTML=`
+    <div><span class="ld" style="background:#2d5a1b"></span> OK — ${ok} items</div>
+    <div><span class="ld" style="background:#7a4a08"></span> Low — ${low} items</div>
+    <div><span class="ld" style="background:#8a1f1f"></span> Out — ${out} items</div>`;
+  const sorted=[...items].sort((a,b)=>status(a)==='out'?-1:status(b)==='out'?1:0);
+  document.getElementById('rep-body').innerHTML=sorted.map(i=>`<tr><td style="font-weight:600">${i.name}</td><td>${i.cat}</td><td>${i.qty}</td><td>${i.unit}</td><td>${i.min}</td><td>${badge(status(i))}</td></tr>`).join('');
+}
+
+function exportReport(){
+  let csv='Name,Category,Quantity,Unit,Minimum,Status\n';
+  items.forEach(i=>csv+=`${i.name},${i.cat},${i.qty},${i.unit},${i.min},${status(i)}\n`);
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='cafe_stock_report.csv';a.click();
+  toast('Report exported ✓');
+}
+
+document.getElementById('item-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+document.getElementById('adj-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeAdj()});
+
+renderDashboard();
+</script>
+</body>
+</html>
